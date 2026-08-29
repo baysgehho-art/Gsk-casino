@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSK | CASINO</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="casino-container">
+        <div class="header">
+            <h1>GSK | CASINO</h1>
+            <div class="jackpot">ДЖЕКПОТ: <span id="jackpot">1000</span> USDT</div>
+            <div class="balance">Баланс: <span id="balance">100</span> USDT</div>
+        </div>
+        
+        <div class="slot-machine">
+            <div class="slots-grid" id="slotsGrid">
+                <div class="reel-column">
+                    <div class="reel-cell" id="cell-0-0">💎</div>
+                    <div class="reel-cell" id="cell-0-1">7️⃣</div>
+                    <div class="reel-cell" id="cell-0-2">🍒</div>
+                </div>
+                <div class="reel-column">
+                    <div class="reel-cell" id="cell-1-0">⭐</div>
+                    <div class="reel-cell" id="cell-1-1">🔔</div>
+                    <div class="reel-cell" id="cell-1-2">🍋</div>
+                </div>
+                <div class="reel-column">
+                    <div class="reel-cell" id="cell-2-0">🔥</div>
+                    <div class="reel-cell" id="cell-2-1">💰</div>
+                    <div class="reel-cell" id="cell-2-2">💎</div>
+                </div>
+                <div class="reel-column">
+                    <div class="reel-cell" id="cell-3-0">7️⃣</div>
+                    <div class="reel-cell" id="cell-3-1">🍒</div>
+                    <div class="reel-cell" id="cell-3-2">⭐</div>
+                </div>
+                <div class="reel-column">
+                    <div class="reel-cell" id="cell-4-0">🔔</div>
+                    <div class="reel-cell" id="cell-4-1">🍋</div>
+                    <div class="reel-cell" id="cell-4-2">🔥</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="bet-control">
+                <label>Ставка:</label>
+                <button id="betMinus">−</button>
+                <span id="betAmount">1</span> USDT
+                <button id="betPlus">+</button>
+            </div>
+            
+            <div class="buttons-row">
+                <button id="spinButton" class="spin-btn">🎰 КРУТИТЬ</button>
+                <button id="autoSpinButton" class="auto-btn">🔄 АВТО</button>
+            </div>
+            
+            <button id="maxBetButton" class="max-btn">💰 МАКС СТАВКА</button>
+        </div>
+        
+        <div class="result" id="result"></div>
+        <div id="confetti"></div>
+        
+        <div class="history">
+            <h3>📊 История игр</h3>
+            <div id="history"></div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
