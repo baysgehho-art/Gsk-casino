@@ -1,199 +1,664 @@
-// GSK | CASINO
-let balance = 100;
-let betAmount = 1;
-let isSpinning = false;
-let autoSpinMode = false;
-let autoSpinCount = 0;
-let jackpot = 1000;
+// ============================================
+// GSK CASINO
+// Virtual Slots
+// ============================================
 
-const symbols = ['💎', '7️⃣', '🍒', '⭐', '🔔', '🍋', '🔥', '💰'];
-const MIN_BET = 1;
-const MAX_BET = 100;
+const symbols = [
+    "💎",
+    "7️⃣",
+    "🍒",
+    "⭐",
+    "🔔",
+    "🍋"
+];
 
-function updateDisplay() {
-    document.getElementById('balance').textContent = balance.toFixed(2);
-    document.getElementById('betAmount').textContent = betAmount;
-    document.getElementById('jackpot').textContent = jackpot.toFixed(0);
-}
+let balance = 1000;
+let bet = 10;
+let spinning = false;
 
-function getRandomSymbol() {
-    return symbols[Math.floor(Math.random() * symbols.length)];
-}
+// Elements
+const balanceEl = document.getElementById("balance");
+const betEl = document.getElementById("bet");
 
-function generateResult() {
-    const grid = [];
-    for (let col = 0; col < 5; col++) {
-        const column = [];
-        for (let row = 0; row < 3; row++) {
-            column.push(getRandomSymbol());
-        }
-        grid.push(column);
+const spinBtn = document.getElementById("spinBtn");
+const plusBtn = document.getElementById("plusBtn");
+const minusBtn = document.getElementById("minusBtn");
+
+const resultEl = document.getElementById("result");
+const historyEl = document.getElementById("history");
+
+const reels = [
+    document.getElementById("reel1"),
+    document.getElementById("reel2"),
+    document.getElementById("reel3")
+];
+
+const reelBoxes = document.querySelectorAll(".reel");
+
+const clearHistoryBtn =
+    document.getElementById("clearHistory");
+
+
+// ============================================
+// TELEGRAM MINI APP
+// ============================================
+
+const tg = window.Telegram?.WebApp;
+
+if (tg) {
+    tg.ready();
+    tg.expand();
+
+    // Telegram theme compatibility
+    if (tg.setHeaderColor) {
+        tg.setHeaderColor("#07050d");
     }
-    return grid;
+
+    if (tg.setBackgroundColor) {
+        tg.setBackgroundColor("#07050d");
+    }
 }
 
-function checkWin(grid) {
-    const winLines = [];
-    let totalWin = 0;
-    const multipliers = { 3: 5, 4: 10, 5: 50 };
-    
-    for (let row = 0; row < 3; row++) {
-        const first = grid[0][row];
-        let count = 1;
-        let cells = [[0, row]];
-        
-        for (let col = 1; col < 5; col++) {
-            if (grid[col][row] === first) {
-                count++;
-                cells.push([col, row]);
-            } else {
-                break;
-            }
-        }
-        
-        if (count >= 3) {
-            const win = betAmount * multipliers[count];
-            totalWin += win;
-            winLines.push({ cells, win });
+
+// ============================================
+// LOCAL STORAGE
+// ============================================
+
+function saveGame() {
+    localStorage.setItem(
+        "gsk_casino_balance",
+        balance
+    );
+
+    localStorage.setItem(
+        "gsk_casino_bet",
+        bet
+    );
+}
+
+function loadGame() {
+
+    const savedBalance =
+        localStorage.getItem("gsk_casino_balance");
+
+    const savedBet =
+        localStorage.getItem("gsk_casino_bet");
+
+    if (savedBalance !== null) {
+        balance = Number(savedBalance);
+
+        if (!Number.isFinite(balance) || balance < 0) {
+            balance = 1000;
         }
     }
-    
-    return { totalWin, winLines };
+
+    if (savedBet !== null) {
+        bet = Number(savedBet);
+
+        if (!Number.isFinite(bet)) {
+            bet = 10;
+        }
+    }
+
+    normalizeBet();
+    updateUI();
 }
 
-function spin() {
-    if (isSpinning) return;
-    if (balance < betAmount) {
-        showResult('❌ Недостаточно средств!', false);
+
+// ============================================
+// UI
+// ============================================
+
+function updateUI() {
+    balanceEl.textContent = balance;
+    betEl.textContent = bet;
+
+    minusBtn.disabled =
+        spinning || bet <= 1;
+
+    plusBtn.disabled =
+        spinning || bet >= Math.min(100, balance);
+
+    spinBtn.disabled =
+        spinning || balance < bet;
+}
+
+function normalizeBet() {
+
+    if (balance <= 0) {
+        bet = 1;
         return;
     }
-    
-    isSpinning = true;
-    balance -= betAmount;
-    updateDisplay();
-    
-    const button = document.getElementById('spinButton');
-    button.disabled = true;
-    button.textContent = '🎰 КРУТИМ...';
-    
-    const cells = document.querySelectorAll('.reel-cell');
-    cells.forEach(cell => {
-        cell.classList.remove('winning');
-        cell.style.animation = 'pulse 0.15s infinite';
-    });
-    
-    setTimeout(() => {
-        const grid = generateResult();
-        const { totalWin, winLines } = checkWin(grid);
-        
-        for (let col = 0; col < 5; col++) {
-            for (let row = 0; row < 3; row++) {
-                const cell = document.getElementById(`cell-${col}-${row}`);
-                cell.textContent = grid[col][row];
-                cell.style.animation = 'none';
-            }
-        }
-        
-        winLines.forEach(line => {
-            line.cells.forEach(([col, row]) => {
-                const cell = document.getElementById(`cell-${col}-${row}`);
-                cell.classList.add('winning');
-            });
-        });
-        
-        if (totalWin > 0) {
-            balance += totalWin;
-            jackpot += betAmount * 0.1;
-            showResult(`🎉 ВЫИГРЫШ: ${totalWin} USDT! 🎉`, true);
-            createConfetti();
-        } else {
-            showResult('😢 Не повезло! Попробуй ещё!', false);
-        }
-        
-        addHistory(grid, totalWin);
-        updateDisplay();
-        isSpinning = false;
-        button.disabled = false;
-        button.textContent = '🎰 КРУТИТЬ';
-        
-        if (autoSpinMode && autoSpinCount > 0) {
-            autoSpinCount--;
-            if (autoSpinCount === 0) {
-                autoSpinMode = false;
-                document.getElementById('autoSpinButton').textContent = '🔄 АВТО';
-            }
-            setTimeout(spin, 500);
-        }
-    }, 800);
+
+    const maxBet =
+        Math.min(100, balance);
+
+    if (bet > maxBet) {
+        bet = maxBet;
+    }
+
+    if (bet < 1) {
+        bet = 1;
+    }
 }
 
-function showResult(text, isWin) {
-    const resultElement = document.getElementById('result');
-    resultElement.textContent = text;
-    resultElement.className = isWin ? 'result win' : 'result lose';
+
+// ============================================
+// BET CONTROL
+// ============================================
+
+minusBtn.addEventListener("click", () => {
+
+    if (spinning) return;
+
+    bet -= 1;
+
+    if (bet < 1) {
+        bet = 1;
+    }
+
+    saveGame();
+    updateUI();
+});
+
+
+plusBtn.addEventListener("click", () => {
+
+    if (spinning) return;
+
+    const maxBet =
+        Math.min(100, balance);
+
+    bet += 1;
+
+    if (bet > maxBet) {
+        bet = maxBet;
+    }
+
+    saveGame();
+    updateUI();
+});
+
+
+// Quick bet buttons
+document
+    .querySelectorAll(".quick-bets button")
+    .forEach(button => {
+
+        button.addEventListener("click", () => {
+
+            if (spinning) return;
+
+            const value =
+                Number(button.dataset.bet);
+
+            bet = Math.min(
+                value,
+                100,
+                balance
+            );
+
+            if (bet < 1 && balance > 0) {
+                bet = 1;
+            }
+
+            saveGame();
+            updateUI();
+        });
+
+    });
+
+
+// ============================================
+// RANDOM SYMBOL
+// ============================================
+
+function randomSymbol() {
+
+    return symbols[
+        Math.floor(
+            Math.random() * symbols.length
+        )
+    ];
 }
+
+
+// ============================================
+// SPIN ANIMATION
+// ============================================
+
+function animateReel(reel, duration) {
+
+    return new Promise(resolve => {
+
+        const box =
+            reel.parentElement;
+
+        box.classList.add("spinning");
+
+        const interval =
+            setInterval(() => {
+
+                reel.textContent =
+                    randomSymbol();
+
+            }, 80);
+
+        setTimeout(() => {
+
+            clearInterval(interval);
+            box.classList.remove("spinning");
+
+            resolve();
+
+        }, duration);
+
+    });
+}
+
+
+// ============================================
+// CALCULATE WIN
+// ============================================
+
+function calculateWin(result) {
+
+    const [a, b, c] = result;
+
+    // 3 одинаковых
+    if (a === b && b === c) {
+        return {
+            multiplier: 10,
+            type: "big"
+        };
+    }
+
+    // 2 одинаковых
+    if (
+        a === b ||
+        a === c ||
+        b === c
+    ) {
+        return {
+            multiplier: 2,
+            type: "small"
+        };
+    }
+
+    return {
+        multiplier: 0,
+        type: "none"
+    };
+}
+
+
+// ============================================
+// SPIN
+// ============================================
+
+spinBtn.addEventListener("click", spin);
+
+async function spin() {
+
+    if (spinning) return;
+
+    if (balance < bet) {
+
+        resultEl.textContent =
+            "Недостаточно очков";
+
+        resultEl.className =
+            "result lose";
+
+        return;
+    }
+
+    spinning = true;
+
+    // Снимаем ставку
+    balance -= bet;
+
+    saveGame();
+    updateUI();
+
+    resultEl.textContent =
+        "Барабаны вращаются...";
+
+    resultEl.className =
+        "result";
+
+    spinBtn.classList.add("spinning");
+
+    reelBoxes.forEach(box => {
+        box.classList.remove("win");
+    });
+
+
+    // Получаем результат заранее
+    const result = [
+        randomSymbol(),
+        randomSymbol(),
+        randomSymbol()
+    ];
+
+
+    // Последовательное вращение барабанов
+    await Promise.all([
+        animateReel(reels[0], 900),
+        animateReel(reels[1], 1250),
+        animateReel(reels[2], 1600)
+    ]);
+
+
+    // Показываем результат
+    reels.forEach((reel, index) => {
+        reel.textContent = result[index];
+    });
+
+
+    const winData =
+        calculateWin(result);
+
+
+    let winAmount = 0;
+
+
+    if (winData.multiplier > 0) {
+
+        winAmount =
+            bet * winData.multiplier;
+
+        balance += winAmount;
+
+        resultEl.className =
+            "result win";
+
+        if (winData.multiplier === 10) {
+
+            resultEl.textContent =
+                `🎉 ДЖЕКПОТ! +${winAmount} очков`;
+
+        } else {
+
+            resultEl.textContent =
+                `✨ ВЫИГРЫШ! +${winAmount} очков`;
+
+        }
+
+
+        // Подсветка совпавших барабанов
+        const [a, b, c] = result;
+
+        if (a === b) {
+            reelBoxes[0].classList.add("win");
+            reelBoxes[1].classList.add("win");
+        }
+
+        if (a === c) {
+            reelBoxes[0].classList.add("win");
+            reelBoxes[2].classList.add("win");
+        }
+
+        if (b === c) {
+            reelBoxes[1].classList.add("win");
+            reelBoxes[2].classList.add("win");
+        }
+
+        if (winData.multiplier === 10) {
+            reelBoxes.forEach(box =>
+                box.classList.add("win")
+            );
+        }
+
+        createConfetti();
+
+    } else {
+
+        resultEl.className =
+            "result lose";
+
+        resultEl.textContent =
+            `Не повезло. −${bet} очков`;
+
+    }
+
+
+    addHistory(
+        result,
+        bet,
+        winAmount,
+        winData.multiplier
+    );
+
+
+    saveGame();
+
+    spinning = false;
+
+    spinBtn.classList.remove("spinning");
+
+    normalizeBet();
+    updateUI();
+
+
+    // Если баланс стал 0
+    if (balance === 0) {
+
+        resultEl.textContent =
+            "Баланс закончился";
+
+        resultEl.className =
+            "result lose";
+
+    }
+}
+
+
+// ============================================
+// HISTORY
+// ============================================
+
+function getHistory() {
+
+    try {
+
+        return JSON.parse(
+            localStorage.getItem(
+                "gsk_casino_history"
+            )
+        ) || [];
+
+    } catch {
+        return [];
+    }
+}
+
+
+function saveHistory(history) {
+
+    localStorage.setItem(
+        "gsk_casino_history",
+        JSON.stringify(history)
+    );
+}
+
+
+function addHistory(
+    result,
+    betAmount,
+    winAmount,
+    multiplier
+) {
+
+    const history =
+        getHistory();
+
+    history.unshift({
+        result,
+        bet: betAmount,
+        win: winAmount,
+        multiplier,
+        time: new Date().toLocaleTimeString(
+            "ru-RU",
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        )
+    });
+
+
+    // Максимум 20 записей
+    history.splice(20);
+
+    saveHistory(history);
+
+    renderHistory();
+}
+
+
+function renderHistory() {
+
+    const history =
+        getHistory();
+
+    if (history.length === 0) {
+
+        historyEl.innerHTML = `
+            <div class="empty-history">
+                Здесь появятся результаты вращений
+            </div>
+        `;
+
+        return;
+    }
+
+
+    historyEl.innerHTML =
+        history.map(game => {
+
+            const win =
+                game.multiplier > 0;
+
+            return `
+                <div class="history-item">
+
+                    <div class="history-symbols">
+                        ${game.result.join(" ")}
+                    </div>
+
+                    <div class="history-info">
+
+                        <small>${game.time}</small>
+
+                        ${
+                            win
+                            ? `<span class="history-win">
+                                +${game.win} ✦
+                              </span>`
+                            : `<span class="history-loss">
+                                −${game.bet} ✦
+                              </span>`
+                        }
+
+                    </div>
+
+                </div>
+            `;
+
+        }).join("");
+}
+
+
+// ============================================
+// CLEAR HISTORY
+// ============================================
+
+clearHistoryBtn.addEventListener(
+    "click",
+    () => {
+
+        localStorage.removeItem(
+            "gsk_casino_history"
+        );
+
+        renderHistory();
+
+    }
+);
+
+
+// ============================================
+// CONFETTI
+// ============================================
 
 function createConfetti() {
-    const container = document.getElementById('confetti');
-    const colors = ['#ffd700', '#ff00ff', '#00ff00', '#ff4444', '#00ffff', '#ffaa00'];
-    
-    for (let i = 0; i < 100; i++) {
-        const piece = document.createElement('div');
-        piece.className = 'confetti-piece';
-        piece.style.left = Math.random() * 100 + '%';
-        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-        piece.style.animationDelay = Math.random() * 1 + 's';
-        piece.style.animationDuration = (Math.random() * 2 + 2) + 's';
+
+    const container =
+        document.getElementById("confetti");
+
+    const pieces = 70;
+
+    for (let i = 0; i < pieces; i++) {
+
+        const piece =
+            document.createElement("div");
+
+        piece.className =
+            "confetti-piece";
+
+        piece.style.left =
+            Math.random() * 100 + "%";
+
+        piece.style.animationDelay =
+            Math.random() * .5 + "s";
+
+        piece.style.transform =
+            `rotate(${Math.random() * 360}deg)`;
+
+        // Используем разные оттенки через CSS
+        const type =
+            Math.floor(Math.random() * 3);
+
+        if (type === 0) {
+            piece.style.background =
+                "#ffd35a";
+        } else if (type === 1) {
+            piece.style.background =
+                "#a855f7";
+        } else {
+            piece.style.background =
+                "#ffffff";
+        }
+
         container.appendChild(piece);
-        
+
+
         setTimeout(() => {
             piece.remove();
-        }, 3000);
+        }, 2500);
+
     }
 }
 
-function addHistory(grid, win) {
-    const historyElement = document.getElementById('history');
-    const item = document.createElement('div');
-    const flatGrid = grid.flat().join(' ');
-    item.className = win > 0 ? 'history-item win' : 'history-item lose';
-    item.textContent = flatGrid + ' — ' + (win > 0 ? '+' + win + ' USDT' : 'Проигрыш');
-    historyElement.prepend(item);
-    
-    while (historyElement.children.length > 30) {
-        historyElement.removeChild(historyElement.lastChild);
-    }
-}
 
-function changeBet(delta) {
-    if (isSpinning) return;
-    betAmount = Math.max(MIN_BET, Math.min(MAX_BET, betAmount + delta));
-    updateDisplay();
-}
+// ============================================
+// START
+// ============================================
 
-function setMaxBet() {
-    if (isSpinning) return;
-    betAmount = Math.min(balance, MAX_BET);
-    updateDisplay();
-}
+loadGame();
+renderHistory();
 
-function toggleAutoSpin() {
-    if (autoSpinMode) {
-        autoSpinMode = false;
-        autoSpinCount = 0;
-        document.getElementById('autoSpinButton').textContent = '🔄 АВТО';
-        spin();
-    } else {
-        autoSpinMode = true;
-        autoSpinCount = 10;
-        document.getElementById('autoSpinButton').textContent = '⏹ СТОП';
-    }
-}
 
-document.getElementById('spinButton').addEventListener('click', spin);
-document.getElementById('autoSpinButton').addEventListener('click', toggleAutoSpin);
-document.getElementById('betMinus').addEventListener('click', () => changeBet(-1));
-document.getElementById('betPlus').addEventListener('click', () => changeBet(1));
-document.getElementById('maxBetButton').addEventListener('click', setMaxBet);
+// Предотвращаем случайный скролл
+document.addEventListener(
+    "touchmove",
+    event => {
 
-updateDisplay();
+        if (event.scale !== 1) {
+            event.preventDefault();
+        }
+
+    },
+    { passive: false }
+);
