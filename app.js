@@ -305,7 +305,7 @@ async function spin() {
     if (balance < bet) {
 
         resultEl.textContent =
-            "Недостаточно очков";
+            "Недостаточно USDT";
 
         resultEl.className =
             "result lose";
@@ -376,12 +376,12 @@ async function spin() {
         if (winData.multiplier === 10) {
 
             resultEl.textContent =
-                `🎉 ДЖЕКПОТ! +${winAmount} очков`;
+                `🎉 ДЖЕКПОТ! +${winAmount} USDT`;
 
         } else {
 
             resultEl.textContent =
-                `✨ ВЫИГРЫШ! +${winAmount} очков`;
+                `✨ ВЫИГРЫШ! +${winAmount} USDT`;
 
         }
 
@@ -418,7 +418,7 @@ async function spin() {
             "result lose";
 
         resultEl.textContent =
-            `Не повезло. −${bet} очков`;
+            `Не повезло. −${bet} USDT`;
 
     }
 
@@ -554,10 +554,10 @@ function renderHistory() {
                         ${
                             win
                             ? `<span class="history-win">
-                                +${game.win} ✦
+                                +${game.win} $
                               </span>`
                             : `<span class="history-loss">
-                                −${game.bet} ✦
+                                −${game.bet} $
                               </span>`
                         }
 
